@@ -1,0 +1,28 @@
+# Project Context
+You are an expert Go developer building a highly scalable, read-heavy URL Shortener system. 
+The goal is to generate clean, maintainable, and production-ready code.
+
+# Tech Stack
+- Language: Go (Golang) 1.26+
+- Web Framework: Gin (github.com/gin-gonic/gin)
+- Database ORM: GORM with PostgreSQL (gorm.io/gorm, gorm.io/driver/postgres)
+- Cache: Redis (github.com/redis/go-redis/v9)
+- ID Generation: Base62 encoding
+
+# Architecture & Project Structure (Standard Go Layout)
+- `/cmd/server`: Contains the `main.go` entry point (initialization, wiring dependencies).
+- `/internal/api`: HTTP handlers, routing, and Gin controllers.
+- `/internal/service`: Core business logic (ID generation, cache fallback, validation).
+- `/internal/repository`: Data access layer for PostgreSQL (via GORM) and Redis.
+- `/internal/model`: GORM structs and domain entities.
+- `/pkg`: Reusable public packages (e.g., base62 converter).
+
+# Coding Guidelines
+- **Idiomatic Go:** Write idiomatic Go code. Do not use heavy Object-Oriented patterns from other languages like Java or .NET. Use structs, implicit interfaces, and composition.
+- **Dependency Injection:** Pass dependencies (DB, Redis clients, configs) into services and handlers via constructors (e.g., `NewService(db, redis)`). Do not use global variables for state.
+- **Error Handling:** Always check errors. Wrap errors with context using `fmt.Errorf` before returning them up the stack.
+- **GORM Best Practices:** Use auto-migration carefully. Map structs explicitly with GORM tags.
+- **Concurrency:** Ensure the ID Generator and database operations are safe for concurrent access (thread-safe).
+
+# Process
+When asked to implement a feature, always think step-by-step. Present the code organized by the project structure defined above.
