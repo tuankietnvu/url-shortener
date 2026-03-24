@@ -2,13 +2,30 @@ package main
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
+	"url-shortener/internal/config"
+	"url-shortener/internal/database"
 )
 
 func main() {
 	// Khởi tạo router của Gin
 	r := gin.Default()
+
+	cfg := config.LoadConfig()
+	if err := database.RunMigrations(cfg.DatabaseURL); err != nil {
+		panic(err)
+	}
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	// Gin's r.Run expects an address like ":8080".
+	if len(port) > 0 && port[0] != ':' {
+		port = ":" + port
+	}
 
 	// Tạo một API Ping để test server
 	r.GET("/ping", func(c *gin.Context) {
@@ -19,5 +36,5 @@ func main() {
 	})
 
 	// Chạy server ở port 8080
-	r.Run(":8080")
+	r.Run(port)
 }
