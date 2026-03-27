@@ -5,8 +5,11 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
+
 	"url-shortener/internal/config"
 	"url-shortener/internal/database"
+	"url-shortener/internal/handler"
+	"url-shortener/internal/repository"
 )
 
 func main() {
@@ -17,6 +20,11 @@ func main() {
 	if err := database.RunMigrations(cfg.DatabaseURL); err != nil {
 		panic(err)
 	}
+
+	db := database.ConnectDB(cfg.DatabaseURL)
+	urlRepo := repository.NewURLRepository(db)
+	urlHandler := handler.NewURLHandler(urlRepo)
+	urlHandler.RegisterRoutes(r)
 
 	port := os.Getenv("PORT")
 	if port == "" {
