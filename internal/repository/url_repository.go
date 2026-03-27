@@ -12,6 +12,7 @@ import (
 type URLRepository interface {
 	Create(ctx context.Context, url *model.URL) error
 	FindByShortID(ctx context.Context, shortID string) (*model.URL, error)
+	UpdateLongURLByShortID(ctx context.Context, shortID string, longURL string) (*model.URL, error)
 	IncrementClick(ctx context.Context, shortID string) error
 }
 
@@ -37,6 +38,21 @@ func (r *gormURLRepository) FindByShortID(ctx context.Context, shortID string) (
 
 	if err := r.db.WithContext(ctx).Where("short_id = ?", shortID).First(&url).Error; err != nil {
 		return nil, fmt.Errorf("repository: find url by short_id %q: %w", shortID, err)
+	}
+
+	return &url, nil
+}
+
+func (r *gormURLRepository) UpdateLongURLByShortID(ctx context.Context, shortID string, longURL string) (*model.URL, error) {
+	var url model.URL
+
+	if err := r.db.WithContext(ctx).Where("short_id = ?", shortID).First(&url).Error; err != nil {
+		return nil, fmt.Errorf("repository: find url by short_id %q for update: %w", shortID, err)
+	}
+
+	url.LongURL = longURL
+	if err := r.db.WithContext(ctx).Save(&url).Error; err != nil {
+		return nil, fmt.Errorf("repository: update long_url by short_id %q: %w", shortID, err)
 	}
 
 	return &url, nil

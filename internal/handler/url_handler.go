@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 	"github.com/lib/pq"
+	"gorm.io/gorm"
 
 	"url-shortener/internal/model"
 	"url-shortener/internal/repository"
@@ -47,6 +47,7 @@ var base62Alphabet = []byte("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmno
 func (h *URLHandler) RegisterRoutes(r *gin.Engine) {
 	r.POST("/shorten", h.CreateShortURL)
 	r.GET("/shorten/:shortCode", h.GetOriginalURL)
+	r.PUT("/shorten/:shortCode", h.UpdateShortURL)
 }
 
 func (h *URLHandler) CreateShortURL(c *gin.Context) {
@@ -103,10 +104,8 @@ func (h *URLHandler) CreateShortURL(c *gin.Context) {
 		return
 	}
 
-	// Your model doesn't have UpdatedAt, so for create responses we map
-	// updatedAt to createdAt.
 	createdAt := created.CreatedAt.UTC()
-	updatedAt := createdAt
+	updatedAt := created.UpdatedAt.UTC()
 
 	c.JSON(http.StatusCreated, CreateShortURLResponse{
 		ID:        fmt.Sprintf("%d", created.ID),
@@ -143,7 +142,7 @@ func (h *URLHandler) GetOriginalURL(c *gin.Context) {
 	}
 
 	createdAt := url.CreatedAt.UTC()
-	updatedAt := createdAt
+	updatedAt := url.UpdatedAt.UTC()
 
 	c.JSON(http.StatusOK, CreateShortURLResponse{
 		ID:        fmt.Sprintf("%d", url.ID),
@@ -151,6 +150,54 @@ func (h *URLHandler) GetOriginalURL(c *gin.Context) {
 		ShortCode: url.ShortID,
 		CreatedAt: createdAt,
 		UpdatedAt: updatedAt,
+	})
+}
+
+func (h *URLHandler) UpdateShortURL(c *gin.Context) {
+	shortCode := c.Param("shortCode")
+	if shortCode == "" {
+		c.JSON(http.StatusNotFound, gin.H{
+			"errors": []string{"short code not found"},
+		})
+		return
+	}
+
+	var req CreateShortURLRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"errors": []string{"invalid JSON body"},
+		})
+		return
+	}
+
+	if err := validateLongURL(req.URL); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"errors": []string{err.Error()},
+		})
+		return
+	}
+
+	updatedURL, err := h.repo.UpdateLongURLByShortID(c.Request.Context(), shortCode, req.URL)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{
+				"errors": []string{"short code not found"},
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"errors": []string{"failed to update short url"},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, CreateShortURLResponse{
+		ID:        fmt.Sprintf("%d", updatedURL.ID),
+		URL:       updatedURL.LongURL,
+		ShortCode: updatedURL.ShortID,
+		CreatedAt: updatedURL.CreatedAt.UTC(),
+		UpdatedAt: updatedURL.UpdatedAt.UTC(),
 	})
 }
 

@@ -1,0 +1,3 @@
+ALTER TABLE urls
+DROP COLUMN IF EXISTS updated_at;
+

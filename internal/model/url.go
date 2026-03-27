@@ -8,6 +8,7 @@ type URL struct {
 	LongURL   string     `gorm:"type:text;not null"`
 	Clicks    int        `gorm:"not null;default:0"`
 	CreatedAt time.Time  `gorm:"not null;autoCreateTime"`
+	UpdatedAt time.Time  `gorm:"not null;autoUpdateTime"`
 	ExpiredAt *time.Time `gorm:"index"`
 }
 
