@@ -49,6 +49,8 @@ func (h *URLHandler) RegisterRoutes(r *gin.Engine) {
 	r.GET("/shorten/:shortCode", h.GetOriginalURL)
 	r.PUT("/shorten/:shortCode", h.UpdateShortURL)
 	r.DELETE("/shorten/:shortCode", h.DeleteShortURL)
+	// Redirect endpoint: clicking the short link increments clicks and redirects.
+	r.GET("/:shortCode", h.RedirectShortURL)
 }
 
 func (h *URLHandler) CreateShortURL(c *gin.Context) {
@@ -227,6 +229,41 @@ func (h *URLHandler) DeleteShortURL(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+func (h *URLHandler) RedirectShortURL(c *gin.Context) {
+	shortCode := c.Param("shortCode")
+	if shortCode == "" {
+		c.JSON(http.StatusNotFound, gin.H{
+			"errors": []string{"short code not found"},
+		})
+		return
+	}
+
+	ctx := c.Request.Context()
+	u, err := h.repo.FindByShortID(ctx, shortCode)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{
+				"errors": []string{"short code not found"},
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"errors": []string{"failed to retrieve url"},
+		})
+		return
+	}
+
+	if err := h.repo.IncrementClick(ctx, shortCode); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"errors": []string{"failed to increment clicks"},
+		})
+		return
+	}
+
+	c.Redirect(http.StatusFound, u.LongURL)
 }
 
 func validateLongURL(raw string) error {
