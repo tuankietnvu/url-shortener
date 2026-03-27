@@ -48,6 +48,7 @@ func (h *URLHandler) RegisterRoutes(r *gin.Engine) {
 	r.POST("/shorten", h.CreateShortURL)
 	r.GET("/shorten/:shortCode", h.GetOriginalURL)
 	r.PUT("/shorten/:shortCode", h.UpdateShortURL)
+	r.DELETE("/shorten/:shortCode", h.DeleteShortURL)
 }
 
 func (h *URLHandler) CreateShortURL(c *gin.Context) {
@@ -199,6 +200,33 @@ func (h *URLHandler) UpdateShortURL(c *gin.Context) {
 		CreatedAt: updatedURL.CreatedAt.UTC(),
 		UpdatedAt: updatedURL.UpdatedAt.UTC(),
 	})
+}
+
+func (h *URLHandler) DeleteShortURL(c *gin.Context) {
+	shortCode := c.Param("shortCode")
+	if shortCode == "" {
+		c.JSON(http.StatusNotFound, gin.H{
+			"errors": []string{"short code not found"},
+		})
+		return
+	}
+
+	err := h.repo.DeleteByShortID(c.Request.Context(), shortCode)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{
+				"errors": []string{"short code not found"},
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"errors": []string{"failed to delete short url"},
+		})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }
 
 func validateLongURL(raw string) error {

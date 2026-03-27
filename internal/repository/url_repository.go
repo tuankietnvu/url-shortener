@@ -13,6 +13,7 @@ type URLRepository interface {
 	Create(ctx context.Context, url *model.URL) error
 	FindByShortID(ctx context.Context, shortID string) (*model.URL, error)
 	UpdateLongURLByShortID(ctx context.Context, shortID string, longURL string) (*model.URL, error)
+	DeleteByShortID(ctx context.Context, shortID string) error
 	IncrementClick(ctx context.Context, shortID string) error
 }
 
@@ -56,6 +57,17 @@ func (r *gormURLRepository) UpdateLongURLByShortID(ctx context.Context, shortID 
 	}
 
 	return &url, nil
+}
+
+func (r *gormURLRepository) DeleteByShortID(ctx context.Context, shortID string) error {
+	result := r.db.WithContext(ctx).Where("short_id = ?", shortID).Delete(&model.URL{})
+	if result.Error != nil {
+		return fmt.Errorf("repository: delete by short_id %q: %w", shortID, result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("repository: delete by short_id %q: %w", shortID, gorm.ErrRecordNotFound)
+	}
+	return nil
 }
 
 func (r *gormURLRepository) IncrementClick(ctx context.Context, shortID string) error {
